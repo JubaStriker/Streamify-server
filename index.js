@@ -1,29 +1,71 @@
-const express = require('express');
-const cors = require('cors');
-const bodyParser = require("body-parser");
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
-
-const { response } = require('express');
-const jwt = require('jsonwebtoken');
-
-require('dotenv').config();
+const express = require('express');
 const app = express();
+const cors = require('cors');
+const port = 5000;
+require('dotenv').config();
+
+//implement jwt token
+const jwt = require('jsonwebtoken')
 
 app.use(cors());
 app.use(express.json());
-const port = process.env.PORT || 5000;
 
+const multer = require("multer");
+const firebase = require("firebase/app");
+const { getStorage, ref, uploadBytes, getDownloadURL } = require("firebase/storage");
+const { query } = require('express');
 
+const firebaseConfig = {
+    apiKey: "AIzaSyAZ-WwrEgEy2CvzA_sEgJCOaB65NygeVhk",
+    authDomain: "streamify-eb7bf.firebaseapp.com",
+    projectId: "streamify-eb7bf",
+    storageBucket: "streamify-eb7bf.appspot.com",
+    messagingSenderId: "736524230575",
+    appId: "1:736524230575:web:aa68be6aef03b0259b195a"
+};
 
-const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.mpeq17q.mongodb.net/?retryWrites=true&w=majority`;
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
+const storage = getStorage()
+const upload = multer({ storage: multer.memoryStorage() });
 
-
+const uri = "mongodb+srv://JubaStriker:Jubair12345@cluster0.wdwswcc.mongodb.net/?retryWrites=true&w=majority";
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
 
+
+// --------- Upload videos to Firebase ------------ //
+
+app.post('/uploadVideo', upload.single("filename"), (req, res) => {
+    if (!req.file) {
+        // No file was uploaded with the request
+        console.log("file has come")
+        res.status(400).send("No file uploaded.");
+        return;
+    }
+    const storageRef = ref(storage, req.file.originalname);
+    const metadata = {
+        contentType: 'video/mp4'
+    };
+    uploadBytes(storageRef, req.file.buffer, metadata)
+        .then(() => {
+            console.log("Upload bytes")
+            getDownloadURL(storageRef).then(url => {
+                console.log(url)
+                res.send({ url });
+            });
+        })
+        .catch(error => {
+            console.error(error);
+            console.log("Error uploading video")
+            res.status(500).send(error);
+        });
+});
+
 app.get('/', (req, res) => {
-    res.send('Streamify server is running');
+    res.send('API running');
 })
 
 app.listen(port, () => {
-    console.log('Server is running on port', port);
+    console.log(`listening on ${port}`);
 })
