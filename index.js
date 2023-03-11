@@ -39,7 +39,6 @@ const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology:
 app.post('/uploadVideo', upload.single("filename"), (req, res) => {
     if (!req.file) {
         // No file was uploaded with the request
-        console.log("file has come")
         res.status(400).send("No file uploaded.");
         return;
     }
@@ -49,9 +48,7 @@ app.post('/uploadVideo', upload.single("filename"), (req, res) => {
     };
     uploadBytes(storageRef, req.file.buffer, metadata)
         .then(() => {
-            console.log("Upload bytes")
             getDownloadURL(storageRef).then(url => {
-                console.log(url)
                 res.send({ url });
             });
         })
@@ -61,6 +58,31 @@ app.post('/uploadVideo', upload.single("filename"), (req, res) => {
             res.status(500).send(error);
         });
 });
+
+async function run() {
+    try {
+        const postsCollection = client.db('streamify').collection('posts');
+
+
+        app.post('/saveVideo', async (req, res) => {
+            const post = req.body;
+            const result = await postsCollection.insertOne(post)
+            res.send(result);
+        });
+
+        app.get('/videos', async (req, res) => {
+            const query = {}
+            const result = await postsCollection.find(query).toArray();
+            res.send(result);
+        })
+    }
+    finally {
+
+    }
+
+}
+run().catch(err => console.error(err));
+
 
 app.get('/', (req, res) => {
     res.send('API running');
