@@ -1,10 +1,9 @@
-const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const express = require('express');
 const app = express();
 const cors = require('cors');
 const port = 5000;
 require('dotenv').config();
-
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 //implement jwt token
 const jwt = require('jsonwebtoken')
 
@@ -70,11 +69,82 @@ async function run() {
             res.send(result);
         });
 
+        app.post('/shareVideo', async (req, res) => {
+            const post = req.body;
+            const result = await postsCollection.insertOne(post)
+            res.send(result);
+        });
+
         app.get('/videos', async (req, res) => {
             const query = {}
             const result = await postsCollection.find(query).toArray();
             res.send(result);
         })
+
+        app.get('/details/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) };
+            const result = await postsCollection.findOne(query);
+            res.send(result);
+        });
+
+
+        app.put('/postcomment', async (req, res) => {
+
+            const id = req.query.id;
+            const { text, commenter, commenterImg } = req.body;
+            const filter = { _id: new ObjectId(id) }
+            const options = { upsert: true }
+            const updatedDoc = {
+                $push: {
+                    comment: {
+                        text,
+                        commenter,
+                        commenterImg
+                    }
+                }
+            }
+            const result = await postsCollection.updateOne(filter, updatedDoc, options)
+            res.send(result);
+
+        })
+
+        app.put('/postlike', async (req, res) => {
+
+            const id = req.query.id;
+            const uid = req.body.uid;
+            const filter = { _id: new ObjectId(id) }
+            const options = { upsert: true }
+            const updatedDoc = {
+                $push: {
+                    like: {
+                        uid: uid
+                    }
+                }
+            }
+            const result = await postsCollection.updateOne(filter, updatedDoc, options)
+            res.send(result);
+
+        })
+
+        app.put('/postdislike', async (req, res) => {
+
+            const id = req.query.id;
+            const uid = req.body.uid;
+            const filter = { _id: new ObjectId(id) }
+            const options = { upsert: true }
+            const updatedDoc = {
+                $pull: {
+                    like: {
+                        uid: uid
+                    }
+                }
+            }
+            const result = await postsCollection.updateOne(filter, updatedDoc, options)
+            res.send(result);
+
+        })
+
     }
     finally {
 
