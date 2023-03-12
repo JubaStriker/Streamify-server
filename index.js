@@ -61,6 +61,7 @@ app.post('/uploadVideo', upload.single("filename"), (req, res) => {
 async function run() {
     try {
         const postsCollection = client.db('streamify').collection('posts');
+        const notificationsCollection = client.db('streamify').collection('notifications');
 
 
         app.post('/saveVideo', async (req, res) => {
@@ -88,6 +89,52 @@ async function run() {
             res.send(result);
         });
 
+        app.get('/notifications/:email', async (req, res) => {
+            const email = req.params.email;
+            const query = { email: email };
+            const result = await notificationsCollection.find(query).toArray();
+            console.log(result);
+            res.send(result);
+        })
+
+        app.post('/notification', async (req, res) => {
+            const notification = req.body;
+            const email = notification.email;
+            const type = notification.type;
+            const query = {
+                "type": type,
+                "email": email
+            }
+            console.log("query", query)
+            const alreadyWelcome = await notificationsCollection.findOne(query);
+            console.log(alreadyWelcome)
+            if (alreadyWelcome) {
+                res.send({
+                    acknowledged: false,
+                    message: "Already sent a welcome message"
+                })
+                return
+            }
+            else {
+                const result = await notificationsCollection.insertOne(notification);
+                res.send(result);
+            }
+
+        })
+
+        app.put('/views', async (req, res) => {
+            const id = req.query.id;
+            const views = req.body.views
+            const filter = { _id: new ObjectId(id) }
+            const options = { upsert: true }
+            const updatedDoc = {
+                $set: {
+                    views: views
+                }
+            }
+            const result = await postsCollection.updateOne(filter, updatedDoc, options)
+            res.send(result);
+        })
 
         app.put('/postcomment', async (req, res) => {
 
